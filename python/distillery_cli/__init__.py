@@ -1,6 +1,7 @@
 """Distillery CLI - a GitHub release binary installer."""
 
 import os
+import stat
 import subprocess
 import sys
 from pathlib import Path
@@ -29,6 +30,9 @@ def main() -> None:
             file=sys.stderr,
         )
         sys.exit(1)
+    # Ensure the binary is executable; wheels don't preserve the execute bit.
+    if sys.platform != "win32" and not os.access(binary, os.X_OK):
+        binary.chmod(binary.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
     args = [str(binary), *sys.argv[1:]]
     if sys.platform != "win32":
         os.execv(args[0], args)
