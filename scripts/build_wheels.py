@@ -8,6 +8,7 @@
 
 import hashlib
 import io
+import re
 import stat
 import sys
 import tarfile
@@ -69,8 +70,28 @@ PLATFORMS = {
     },
 }
 
+# PEP 440 pre-release labels that are valid on PyPI.
+_PEP440_PRE_LABELS = {"a", "alpha", "b", "beta", "rc", "preview", "dev"}
 
-def sha256_digest(data: bytes) -> str:
+
+def to_pep440(version: str) -> str:
+    """Convert a GitHub release version to a PEP 440 compatible version.
+
+    Stable versions pass through unchanged. Pre-release segments like
+    ``1.8.13-ct.1`` or ``1.8.13-foo.3`` are converted to ``1.8.13.dev1``
+    or ``1.8.13.dev3``. Recognised PEP 440 labels (a, b, rc, dev) are
+    kept as-is, e.g. ``1.8.13-rc.1`` becomes ``1.8.13rc1``.
+    """
+    m = re.match(r"^(\d+(?:\.\d+)*)(?:-([a-zA-Z]+)\.?(\d+))?$", version)
+    if not m:
+        raise ValueError(f"Cannot parse version: {version!r}")
+    base, label, num = m.group(1), m.group(2), m.group(3)
+    if label is None:
+        return base
+    label_lower = label.lower()
+    if label_lower in _PEP440_PRE_LABELS:
+        return f"{base}.{label_lower}{num}" if label_lower == "dev" else f"{base}{label_lower}{num}"
+    return f"{base}.dev{num}"
     """Return url-safe base64 sha256 digest (no padding)."""
     return urlsafe_b64encode(hashlib.sha256(data).digest()).rstrip(b"=").decode()
 
@@ -110,7 +131,8 @@ _FILE_ATTR = (stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH) << 16
 
 
 def build_wheel(
-    version: str,
+    release_version: str,
+    wheel_version: str,
     platform_key: str,
     info: dict[str, str],
     dist_dir: Path,
@@ -125,7 +147,7 @@ def build_wheel(
     asset_key = info.get("asset_key", platform_key)
 
     if asset_key not in asset_cache:
-        asset_cache[asset_key] = download_asset(version, asset_key, ext)
+        asset_cache[asset_key] = download_asset(release_version, asset_key, ext)
     data = asset_cache[asset_key]
 
     binary_data = extract_binary(data, ext, binary_name)
@@ -143,7 +165,7 @@ def build_wheel(
     entries.append((f"{IMPORT_NAME}/{binary_name}", binary_data, True))
 
     # dist-info directory
-    dist_info_dir = f"{DIST_NAME}-{version}.dist-info"
+    dist_info_dir = f"{DIST_NAME}-{wheel_version}.dist-info"
 
     readme_path = Path(__file__).resolve().parent.parent / "README.md"
     readme_text = readme_path.read_text(encoding="utf-8")
@@ -151,7 +173,7 @@ def build_wheel(
     metadata = (
         f"Metadata-Version: 2.4\n"
         f"Name: distillery-bin\n"
-        f"Version: {version}\n"
+        f"Version: {wheel_version}\n"
         f"Summary: Distillery CLI repackaged as Python wheels\n"
         f"Home-page: https://github.com/ekristen/distillery\n"
         f"License: MIT\n"
@@ -185,7 +207,7 @@ def build_wheel(
     entries.append((f"{dist_info_dir}/RECORD", record_data, False))
 
     # Write wheel zip
-    wheel_name = f"{DIST_NAME}-{version}-py3-none-{platform_tag}.whl"
+    wheel_name = f"{DIST_NAME}-{wheel_version}-py3-none-{platform_tag}.whl"
     wheel_path = dist_dir / wheel_name
     with zipfile.ZipFile(wheel_path, "w", zipfile.ZIP_DEFLATED) as whl:
         for arcname, file_data, executable in entries:
@@ -204,17 +226,21 @@ def main() -> None:
         print(f"Example: {sys.argv[0]} 1.8.11")
         sys.exit(1)
 
-    version = sys.argv[1]
+    release_version = sys.argv[1]
+    wheel_version = to_pep440(release_version)
     dist_dir = Path("dist")
     dist_dir.mkdir(exist_ok=True)
 
-    print(f"Building wheels for distillery v{version}\n")
+    if wheel_version != release_version:
+        print(f"Building wheels for distillery v{release_version} (PyPI version {wheel_version})\n")
+    else:
+        print(f"Building wheels for distillery v{release_version}\n")
 
     asset_cache: dict[str, bytes] = {}
     wheels: list[Path] = []
     for platform_key, info in PLATFORMS.items():
         print(f"[{platform_key}]")
-        wheel = build_wheel(version, platform_key, info, dist_dir, asset_cache=asset_cache)
+        wheel = build_wheel(release_version, wheel_version, platform_key, info, dist_dir, asset_cache=asset_cache)
         wheels.append(wheel)
         print()
 
