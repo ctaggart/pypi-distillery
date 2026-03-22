@@ -153,7 +153,7 @@ def build_wheel(
         f"Name: distillery-bin\n"
         f"Version: {version}\n"
         f"Summary: Distillery CLI repackaged as Python wheels\n"
-        f"Home-page: https://github.com/ctaggart/distillery\n"
+        f"Home-page: https://github.com/ekristen/distillery\n"
         f"License: MIT\n"
         f"Requires-Python: >=3.9\n"
         f"Description-Content-Type: text/markdown\n"
