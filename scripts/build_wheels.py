@@ -19,7 +19,7 @@ import requests  # type: ignore[import-untyped]
 
 IMPORT_NAME = "distillery_cli"
 DIST_NAME = "distillery_bin"
-UPSTREAM_REPO = "ekristen/distillery"
+UPSTREAM_REPO = "ctaggart/distillery"
 
 # Map distillery release platform keys to Python wheel platform tags.
 # Go binaries built with CGO_ENABLED=0 are fully static, so the same
@@ -153,7 +153,7 @@ def build_wheel(
         f"Name: distillery-bin\n"
         f"Version: {version}\n"
         f"Summary: Distillery CLI repackaged as Python wheels\n"
-        f"Home-page: https://github.com/ekristen/distillery\n"
+        f"Home-page: https://github.com/ctaggart/distillery\n"
         f"License: MIT\n"
         f"Requires-Python: >=3.9\n"
         f"Description-Content-Type: text/markdown\n"

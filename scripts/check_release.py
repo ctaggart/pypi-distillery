@@ -13,7 +13,7 @@ from typing import Any
 
 import requests  # type: ignore[import-untyped]
 
-UPSTREAM_REPO = "ekristen/distillery"
+UPSTREAM_REPO = "ctaggart/distillery"
 
 # Must match the unique asset keys in build_wheels.py PLATFORMS dict.
 EXPECTED_ASSETS: list[tuple[str, str]] = [
@@ -39,11 +39,15 @@ def github_headers() -> dict[str, str]:
 
 
 def get_latest_release() -> dict[str, Any]:
-    """Fetch the latest non-prerelease, non-draft release from upstream."""
-    url = f"https://api.github.com/repos/{UPSTREAM_REPO}/releases/latest"
-    resp = requests.get(url, headers=github_headers(), timeout=30)
+    """Fetch the latest release from upstream (including prereleases)."""
+    url = f"https://api.github.com/repos/{UPSTREAM_REPO}/releases"
+    resp = requests.get(url, headers=github_headers(), timeout=30, params={"per_page": 10})
     resp.raise_for_status()
-    return resp.json()
+    releases = resp.json()
+    for release in releases:
+        if not release.get("draft", False):
+            return release
+    raise RuntimeError(f"No published releases found in {UPSTREAM_REPO}")
 
 
 def tag_exists(repo: str, tag: str) -> bool:
