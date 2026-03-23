@@ -92,6 +92,9 @@ def to_pep440(version: str) -> str:
     if label_lower in _PEP440_PRE_LABELS:
         return f"{base}.{label_lower}{num}" if label_lower == "dev" else f"{base}{label_lower}{num}"
     return f"{base}.dev{num}"
+
+
+def sha256_digest(data: bytes) -> str:
     """Return url-safe base64 sha256 digest (no padding)."""
     return urlsafe_b64encode(hashlib.sha256(data).digest()).rstrip(b"=").decode()
 
