@@ -20,7 +20,7 @@ import requests  # type: ignore[import-untyped]
 
 IMPORT_NAME = "distillery_cli"
 DIST_NAME = "distillery_bin"
-UPSTREAM_REPO = "ctaggart/distillery"
+UPSTREAM_REPO = "ekristen/distillery"
 
 # Map distillery release platform keys to Python wheel platform tags.
 # Go binaries built with CGO_ENABLED=0 are fully static, so the same

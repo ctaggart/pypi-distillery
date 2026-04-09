@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write # Needed to push tags
+      actions: write # Needed for gh workflow run
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
