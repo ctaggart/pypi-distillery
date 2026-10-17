@@ -99,12 +99,28 @@ def sha256_digest(data: bytes) -> str:
     return urlsafe_b64encode(hashlib.sha256(data).digest()).rstrip(b"=").decode()
 
 
+def _previous_patch_version(version: str) -> str:
+    base = version.split(".post")[0]
+    parts = base.split(".")
+    if len(parts) >= 3 and parts[-1].isdigit() and int(parts[-1]) > 0:
+        parts[-1] = str(int(parts[-1]) - 1)
+        return ".".join(parts)
+    return base
+
+
 def download_asset(version: str, platform_key: str, ext: str) -> bytes:
     """Download a distillery release asset."""
-    asset_name = f"distillery-v{version}-{platform_key}{ext}"
-    url = f"https://github.com/{UPSTREAM_REPO}/releases/download/v{version}/{asset_name}"
+    upstream_version = version.split(".post")[0]
+    asset_name = f"distillery-v{upstream_version}-{platform_key}{ext}"
+    url = f"https://github.com/{UPSTREAM_REPO}/releases/download/v{upstream_version}/{asset_name}"
     print(f"  Downloading {asset_name} ...")
     resp = requests.get(url, allow_redirects=True, timeout=300)
+    if resp.status_code == 404:
+        upstream_version = _previous_patch_version(version)
+        asset_name = f"distillery-v{upstream_version}-{platform_key}{ext}"
+        url = f"https://github.com/{UPSTREAM_REPO}/releases/download/v{upstream_version}/{asset_name}"
+        print(f"  v{version} not found upstream; falling back to {asset_name} ...")
+        resp = requests.get(url, allow_redirects=True, timeout=300)
     resp.raise_for_status()
     return resp.content
 
@@ -177,9 +193,10 @@ def build_wheel(
         f"Metadata-Version: 2.4\n"
         f"Name: distillery-bin\n"
         f"Version: {wheel_version}\n"
-        f"Summary: Distillery CLI repackaged as Python wheels\n"
-        f"Home-page: https://github.com/ekristen/distillery\n"
+        f"Summary: DEPRECATED: Use 'ghr install ekristen/distillery' instead (https://cataggar.github.io/ghr/)\n"
+        f"Home-page: https://cataggar.github.io/ghr/\n"
         f"License: MIT\n"
+        f"Classifier: Development Status :: 7 - Inactive\n"
         f"Requires-Python: >=3.9\n"
         f"Description-Content-Type: text/markdown\n"
         f"\n"
